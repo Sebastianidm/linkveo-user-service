@@ -1,0 +1,9 @@
+# Entorno virtual de Python
+venv/
+
+# Archivos de base de datos SQLite
+test.db
+
+# Carpetas de caché de Python
+__pycache__/
+*.pyc
