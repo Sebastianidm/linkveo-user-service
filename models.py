@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.sql import func
 
 # Importamos la 'Base' que creamos en database.py
-from .database import Base 
+from database import Base 
 
 class User(Base):
     # Nombre de la tabla en la base de datos

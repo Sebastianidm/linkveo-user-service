@@ -1,46 +1,54 @@
-from fastapi import FastAPI, status
+from fastapi import FastAPI, status, Depends, HTTPException # <--- 1. Importar Depends y HTTPException
+from sqlalchemy.orm import Session # <--- 2. Importar Session
+
 import schemas 
 import security 
-from datetime import datetime
+import models
+import crud # <--- 3. Importar nuestro nuevo archivo crud
+from database import engine, get_db # <--- 4. Importar get_db de database
 
-#inicializar la aplicación FastAPI
+# Esta línea crea la tabla si no existe (ya la teníamos)
+models.Base.metadata.create_all(bind=engine)
+
+# Inicializar la aplicación FastAPI
 app = FastAPI(title="Servicio de Usuarios", version="1.0.0")
 
-# Endpoint raíz
+# Endpoint raíz (sin cambios)
 @app.get("/")
 def read_root():
     return {"message": "Bienvenido al Servicio de Usuarios"}
 
-# Endpoint para registrar un nuevo usuario
+# --- 5. ENDPOINT DE REGISTRO 100% FUNCIONAL ---
 @app.post(
     "/auth/register",
-    response_model=schemas.UserRead,
-    status_code=status.HTTP_201_CREATED,
+    response_model=schemas.UserRead, # (Sin cambios)
+    status_code=status.HTTP_201_CREATED, # (Sin cambios)
 )
-async def register_user(user_in: schemas.UserCreate):
+# --- 6. Inyectar la dependencia de la BD ---
+async def register_user(user_in: schemas.UserCreate, db: Session = Depends(get_db)):
     
-    # Encriptar - Hashear la contraseña usando nuestra función de security.py
+    # --- 7. Validar que el email no exista ---
+    db_user = crud.get_user_by_email(db, email=user_in.email)
+    if db_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="Email already registered"
+        )
     
+    # --- 8. Validar que el username no exista ---
+    db_user_username = crud.get_user_by_username(db, username=user_in.username)
+    if db_user_username:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="Username already registered"
+        )
+    
+    # --- 9. Hashear la contraseña (esto ya lo teníamos) ---
     hashed_password = security.get_password_hash(user_in.password)
     
-    # Imprimimos los datos en la terminal (para demostración)
-    print("--- Usuario Registrado (Datos Seguros) ---")
-    print(f"Username: {user_in.username}")
-    print(f"Email: {user_in.email}")
-    print(f"Hashed Password: {hashed_password}") # Imprimimos el HASH de la contraseña
+    # --- 10. Llamar a CRUD para crear el usuario ---
+    # ¡Ya no hay simulación! Esta es la escritura real en la BD.
+    new_user = crud.create_user(db=db, user=user_in, hashed_password=hashed_password)
     
-    # SIMULACIÓN (Aún hay base de datos)
-    # En el siguiente paso, guardaríamos 'hashed_password' en la BD,
-    # no 'user_in.password'.
-    
-    fake_user_db = {
-        "id":1,
-        "username": user_in.username,
-        "email": user_in.email,
-        "created_at":datetime.now()
-    }
-    
-    # La respuesta sigue siendo la misma.
-    # El 'response_model=schemas.UserRead' se asegura de que
-    # NUNCA devolvamos el hash (ni la contraseña) al cliente.
-    return fake_user_db
+    # Devolvemos el nuevo usuario creado
+    return new_user
