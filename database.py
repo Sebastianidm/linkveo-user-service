@@ -6,9 +6,6 @@ from sqlalchemy.orm import sessionmaker
 # Por ahora, es un archivo local llamado "test.db"
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 
-# (Cuando usemos PostgreSQL en AWS, esta línea será algo como:)
-# SQLALCHEMY_DATABASE_URL = "postgresql://user:password@host/dbname"
-
 # 2. Creamos el "motor" (engine) de SQLAlchemy
 # connect_args es solo para SQLite
 engine = create_engine(

@@ -17,6 +17,23 @@ app = FastAPI(title="Servicio de Usuarios", version="1.0.0")
 def read_root():
     return {"message": "Bienvenido al Servicio de Usuarios"}
 
+
+@app.get("/users/me", response_model=schemas.UserRead)
+async def read_users_me(
+    current_user: models.User = Depends(security.get_current_user)
+):
+    """
+    Obtiene los detalles del usuario actualmente autenticado.
+    
+    Este endpoint está PROTEGIDO. Requiere un token JWT válido.
+    """
+    # Gracias a 'Depends(security.get_current_user)', esta función
+    # SÓLO se ejecutará si el token es válido.
+    # La variable 'current_user' ya contendrá los datos del usuario
+    # que viene de la base de datos.
+    
+    return current_user
+
 @app.post(
     "/auth/register",
     response_model=schemas.UserRead,
