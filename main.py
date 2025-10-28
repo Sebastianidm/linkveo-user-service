@@ -1,7 +1,6 @@
 from fastapi import FastAPI, status, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm 
-
-
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import schemas 
 import security 
@@ -12,6 +11,20 @@ from database import engine, get_db
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Servicio de Usuarios", version="1.0.0")
+
+origins = [
+    "http://localhost:8001", # El link-service
+    "http://127.0.0.1:8001", # El link-service (a veces el navegador usa esta IP)
+    # "http://localhost:3000", # En el futuro, aquí irá nuestra app de React
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins, # Permite los orígenes en la lista
+    allow_credentials=True, # Permite cookies/credenciales
+    allow_methods=["*"], # Permite todos los métodos (GET, POST, etc.)
+    allow_headers=["*"], # Permite todas las cabeceras
+)
 
 @app.get("/")
 def read_root():
@@ -81,7 +94,7 @@ async def login_for_access_token(
     
     # 3. Si todo es correcto, creamos el token
     access_token = security.create_access_token(
-        data={"sub": db_user.username} # "sub" (subject) es el estándar para el ID del token
+        data={"sub": str(db_user.id)}
     )
     
     # 4. Devolvemos el token
