@@ -13,17 +13,18 @@ models.Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Servicio de Usuarios", version="1.0.0")
 
 origins = [
-    "http://localhost:8001", # El link-service
-    "http://127.0.0.1:8001", # El link-service (a veces el navegador usa esta IP)
-    # "http://localhost:3000", # En el futuro, aquí irá nuestra app de React
+    "http://localhost:8001", #
+    "http://127.0.0.1:8001", 
+    "http://localhost:5173", # (React)
+    "http://127.0.0.1:5173", # ip react
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins, # Permite los orígenes en la lista
-    allow_credentials=True, # Permite cookies/credenciales
-    allow_methods=["*"], # Permite todos los métodos (GET, POST, etc.)
-    allow_headers=["*"], # Permite todas las cabeceras
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 @app.get("/")
@@ -80,16 +81,21 @@ async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(), 
     db: Session = Depends(get_db)
 ):
-    # 1. Buscamos al usuario en la BD por su USERNAME
-    #    (form_data.username es el campo 'username' del formulario)
-    db_user = crud.get_user_by_username(db, username=form_data.username)
+    # 1. Intentamos buscar el usuario por EMAIL primero
+    # (Ya que el frontend envía el email en el campo form_data.username)
+    db_user = crud.get_user_by_email(db, email=form_data.username)
+
+    # 2. Si no lo encontramos por email, intentamos por username (por si acaso)
+    if not db_user:
+        db_user = crud.get_user_by_username(db, username=form_data.username)
+    # -------------------
 
     # 2. Si el usuario NO existe O la contraseña es incorrecta
     if not db_user or not security.verify_password(form_data.password, db_user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"}, # Estándar de OAuth2
+            headers={"WWW-Authenticate": "Bearer"},
         )
     
     # 3. Si todo es correcto, creamos el token

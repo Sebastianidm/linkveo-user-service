@@ -5,6 +5,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 import crud
+import models
 from database import get_db
 
 # Constantes 
@@ -49,23 +50,15 @@ def get_current_user(
     )
     
     try:
-        # 2. Intentamos decodificar el token
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        
-        # 3. Extraemos el 'sub' (subject), que es nuestro username
-        username: str = payload.get("sub")
-        
-        if username is None:
-            # Si no hay "sub", el token es inválido
+        user_id: str = payload.get("sub") # El token tiene el ID
+        if user_id is None:
             raise credentials_exception
-            
     except JWTError:
-        # Si 'jwt.decode' falla (token expirado, firma inválida),
-        # lanzamos la excepción.
         raise credentials_exception
     
     # 4. Buscamos al usuario en la base de datos
-    user = crud.get_user_by_username(db, username=username)
+    user = db.query(models.User).filter(models.User.id == int(user_id)).first()
     
     if user is None:
         # Si el usuario del token ya no existe en la BD
